@@ -267,7 +267,8 @@ struct page *kbase_mem_alloc_page(struct kbase_mem_pool *pool)
 	dma_addr_t dma_addr;
 	int i;
 
-	if (is_meson_t5m_cpu() && is_meson_rev_b() &&
+	if (strstr(current->comm, "deqp") &&
+		is_meson_t5m_cpu() && is_meson_rev_b() &&
 		get_gpu_total_mem() > KBASE_T5M_MEM_THRESHOLD) {
 		if (pool->order)
 			gfp |= GFP_HIGHUSER_MOVABLE | __GFP_NOWARN;
