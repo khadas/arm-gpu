@@ -49,7 +49,7 @@
 #define GPU_ACTIVE_SCALING_FACTOR ((u64)1E9)
 #endif
 
-#ifdef CONFIG_MALI_MIDGARD_DVFS
+#if defined(CONFIG_MALI_DEVFREQ) || defined(CONFIG_MALI_MIDGARD_DVFS)
 static enum hrtimer_restart dvfs_callback(struct hrtimer *timer)
 {
 	unsigned long flags;
@@ -71,7 +71,7 @@ static enum hrtimer_restart dvfs_callback(struct hrtimer *timer)
 
 	return HRTIMER_NORESTART;
 }
-#endif /* CONFIG_MALI_MIDGARD_DVFS */
+#endif
 
 int kbasep_pm_metrics_init(struct kbase_device *kbdev)
 {
@@ -130,13 +130,13 @@ int kbasep_pm_metrics_init(struct kbase_device *kbdev)
 #endif
 	spin_lock_init(&kbdev->pm.backend.metrics.lock);
 
-#ifdef CONFIG_MALI_MIDGARD_DVFS
+#if defined(CONFIG_MALI_DEVFREQ) || defined(CONFIG_MALI_MIDGARD_DVFS)
 	hrtimer_init(&kbdev->pm.backend.metrics.timer, CLOCK_MONOTONIC,
 							HRTIMER_MODE_REL);
 	kbdev->pm.backend.metrics.timer.function = dvfs_callback;
 	kbdev->pm.backend.metrics.initialized = true;
 	kbase_pm_metrics_start(kbdev);
-#endif /* CONFIG_MALI_MIDGARD_DVFS */
+#endif
 
 #if MALI_USE_CSF
 	/* The sanity check on the GPU_ACTIVE performance counter
@@ -356,7 +356,7 @@ void kbase_pm_get_dvfs_metrics(struct kbase_device *kbdev,
 KBASE_EXPORT_TEST_API(kbase_pm_get_dvfs_metrics);
 #endif
 
-#ifdef CONFIG_MALI_MIDGARD_DVFS
+#if defined(CONFIG_MALI_DEVFREQ) || defined(CONFIG_MALI_MIDGARD_DVFS)
 void kbase_pm_get_dvfs_action(struct kbase_device *kbdev)
 {
 	int utilisation;
@@ -453,7 +453,7 @@ void kbase_pm_metrics_stop(struct kbase_device *kbdev)
 }
 
 
-#endif /* CONFIG_MALI_MIDGARD_DVFS */
+#endif
 
 #if !MALI_USE_CSF
 /**

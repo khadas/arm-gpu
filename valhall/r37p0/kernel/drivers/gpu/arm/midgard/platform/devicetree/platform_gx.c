@@ -60,7 +60,27 @@ static mali_plat_info_t mali_plat_data = {
 
 static void mali_plat_preheat(void)
 {
-#ifndef CONFIG_MALI_DEVFREQ
+#ifdef CONFIG_MALI_DEVFREQ
+    mali_plat_info_t* pmali_plat = get_mali_plat_data();
+    struct platform_device* ptr_plt_dev = pmali_plat->pdev;
+    struct kbase_device *kbdev = dev_get_drvdata(&ptr_plt_dev->dev);
+    struct devfreq *devfreq = kbdev->devfreq;
+
+    if (!devfreq) {
+        dev_warn(kbdev->dev, "%s, kbdev->devfreq is NULL\n", __func__);
+        return;
+    }
+    if (strncmp(devfreq->governor_name, DEVFREQ_GOV_SIMPLE_ONDEMAND,
+        strlen(DEVFREQ_GOV_SIMPLE_ONDEMAND))) {
+        dev_warn(kbdev->dev, "%s, current governor is not ondemand\n", __func__);
+        return;
+    }
+
+    mutex_lock(&devfreq->lock);
+    pmali_plat->status = PREHEAT_START;
+    devfreq->profile->target(devfreq->dev.parent, &devfreq->scaling_max_freq, 0);
+    mutex_unlock(&devfreq->lock);
+#else
     u32 pre_fs;
     u32 clk, pp;
 
@@ -118,6 +138,31 @@ int get_gpu_max_clk_level(void)
 #ifdef CONFIG_AMLOGIC_GPU_THERMAL
 static void set_limit_mali_freq(u32 idx)
 {
+#ifdef CONFIG_MALI_DEVFREQ
+    mali_plat_info_t* pmali_plat = get_mali_plat_data();
+    struct platform_device* ptr_plt_dev = pmali_plat->pdev;
+    struct kbase_device *kbdev = dev_get_drvdata(&ptr_plt_dev->dev);
+    struct devfreq *devfreq = kbdev->devfreq;
+    unsigned long value;
+    unsigned long *freq_table;
+
+    if (!devfreq || (idx >= devfreq->profile->max_state)) {
+        dev_warn(kbdev->dev, "%s, idx:%d\n", __func__, idx);
+        return;
+    }
+
+    mutex_lock(&devfreq->lock);
+    freq_table = devfreq->profile->freq_table;
+
+    /* Get maximum frequency according to sorting order */
+    if (freq_table[0] < freq_table[devfreq->profile->max_state - 1])
+        value = freq_table[idx];
+    else
+        value = freq_table[devfreq->profile->max_state - 1 - idx];
+
+    devfreq->max_freq = value;
+    mutex_unlock(&devfreq->lock);
+#else
     if (mali_plat_data.limit_on == 0)
         return;
     if (idx > mali_plat_data.turbo_clock || idx < mali_plat_data.scale_info.minclk)
@@ -128,6 +173,7 @@ static void set_limit_mali_freq(u32 idx)
     }
     mali_plat_data.scale_info.maxclk= idx;
     revise_mali_rt();
+#endif
 }
 
 static u32 get_limit_mali_freq(void)
