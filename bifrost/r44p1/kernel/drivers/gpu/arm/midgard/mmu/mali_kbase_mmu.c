@@ -176,7 +176,7 @@ static void mmu_flush_pa_range(struct kbase_device *kbdev, phys_addr_t phys, siz
  * @op_param: Non-NULL pointer to struct containing information about the MMU
  *            operation to perform.
  *
- * Perform an MMU invalidate operation on a particual address space
+ * Perform an MMU invalidate operation on a particular address space
  * by issuing a UNLOCK command.
  */
 static void mmu_invalidate(struct kbase_device *kbdev, struct kbase_context *kctx, int as_nr,
@@ -2429,7 +2429,15 @@ static int mmu_insert_pages_no_flush(struct kbase_device *kbdev, struct kbase_mm
 				 * should be performed with
 				 * kbase_mmu_update_pages()
 				 */
-				WARN_ON((*target & 1UL) != 0);
+				WARN_ONCE((*target & 1UL) != 0,
+					  "vindex=0x%x, count=%d, pgd=0x%pa, "
+					  "insert_vpfn=0x%llx, start_vpfn=0x%llx, "
+					  "nr=%d, remain=%d, group_id=%d, "
+					  "is_huge_head(*phys)=%d\n",
+					  vindex, count, &pgd,
+					  insert_vpfn, start_vpfn,
+					  (u32)nr, (u32)remain, group_id,
+					  is_huge_head(*phys));
 
 				*target = kbase_mmu_create_ate(kbdev,
 					phys[i], flags, cur_level, group_id);
