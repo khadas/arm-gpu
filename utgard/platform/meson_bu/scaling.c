@@ -93,11 +93,11 @@ static inline void mali_clk_exected(void)
 	}
 #else
 	if ((0 == strcmp(dvfs_tbl->clk_parent, "gp0_pll")) &&
-            !IS_ERR(dvfs_tbl->clkp_handle) &&
-            (0 != dvfs_tbl->clkp_freq)) {
-        clk_prepare_enable(dvfs_tbl->clkp_handle);
-        clk_set_rate(dvfs_tbl->clkp_handle, dvfs_tbl->clkp_freq);
-    }
+	    !IS_ERR(dvfs_tbl->clkp_handle) &&
+	    (0 != dvfs_tbl->clkp_freq)) {
+		clk_prepare_enable(dvfs_tbl->clkp_handle);
+		clk_set_rate(dvfs_tbl->clkp_handle, dvfs_tbl->clkp_freq);
+	}
 
 #endif
 

@@ -26,7 +26,7 @@
 #include <linux/of.h>
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
-
+#include "../../platform/meson_bu/meson_main.h"
 #include <linux/mali/mali_utgard.h>
 #include "mali_kernel_common.h"
 #include "mali_session.h"
@@ -187,6 +187,7 @@ static long mali_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 static int mali_probe(struct platform_device *pdev);
 static int mali_remove(struct platform_device *pdev);
+static void mali_shutdown(struct platform_device *pdev);
 
 static int mali_driver_suspend_scheduler(struct device *dev);
 static int mali_driver_resume_scheduler(struct device *dev);
@@ -249,6 +250,7 @@ MODULE_DEVICE_TABLE(of, base_dt_ids);
 static struct platform_driver mali_platform_driver = {
 	.probe  = mali_probe,
 	.remove = mali_remove,
+	.shutdown = mali_shutdown,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 29))
 	.pm = &mali_dev_ext_pm_ops,
 #endif
@@ -681,6 +683,20 @@ static int mali_remove(struct platform_device *pdev)
 #endif
 	mali_platform_device = NULL;
 	return 0;
+}
+
+static void mali_shutdown(struct platform_device *pdev)
+{
+	struct device *dev = get_device(&pdev->dev);
+
+	if (!dev)
+		return;
+
+	MALI_DEBUG_PRINT(4, ("mali_shutdown() called\n"));
+	/* copy from suspend */
+	mali_deep_suspend(dev);
+
+	return;
 }
 
 static int mali_miscdevice_register(struct platform_device *pdev)

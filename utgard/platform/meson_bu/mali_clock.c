@@ -488,23 +488,20 @@ int mali_clock_set(unsigned int clock)
 
 void disable_clock(void)
 {
-#ifndef AML_CLK_LOCK_ERROR
 	struct clk *clk_mali = pmali_plat->clk_mali;
 
 	GPU_CLK_DBG();
-	clk_disable_unprepare(clk_mali);
-#endif
-	GPU_CLK_DBG();
+	if (__clk_is_enabled(clk_mali))
+		clk_disable_unprepare(clk_mali);
 }
 
 void enable_clock(void)
 {
-#ifndef AML_CLK_LOCK_ERROR
 	struct clk *clk_mali = pmali_plat->clk_mali;
 
-	clk_prepare_enable(clk_mali);
-#endif
 	GPU_CLK_DBG();
+	if (!__clk_is_enabled(clk_mali))
+		clk_prepare_enable(clk_mali);
 }
 
 u32 get_mali_freq(u32 idx)
