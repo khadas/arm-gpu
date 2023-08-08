@@ -40,7 +40,9 @@
 #endif
 #include <mali_kbase.h>
 #include <mali_kbase_defs.h>
-
+#ifdef CONFIG_MALI_DEVFREQ
+#include <../drivers/devfreq/governor.h>
+#endif
 #include "mali_scaling.h"
 #include "mali_clock.h"
 #include "meson_main2.h"
@@ -70,7 +72,7 @@ static void mali_plat_preheat(void)
         dev_warn(kbdev->dev, "%s, kbdev->devfreq is NULL\n", __func__);
         return;
     }
-    if (strncmp(devfreq->governor_name, DEVFREQ_GOV_SIMPLE_ONDEMAND,
+    if (strncmp(devfreq->governor->name, DEVFREQ_GOV_SIMPLE_ONDEMAND,
         strlen(DEVFREQ_GOV_SIMPLE_ONDEMAND))) {
         dev_warn(kbdev->dev, "%s, current governor is not ondemand\n", __func__);
         return;
@@ -160,7 +162,11 @@ static void set_limit_mali_freq(u32 idx)
     else
         value = freq_table[devfreq->profile->max_state - 1 - idx];
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+    dev_pm_qos_update_request(&devfreq->user_max_freq_req, value);
+#else
     devfreq->max_freq = value;
+#endif
     mutex_unlock(&devfreq->lock);
 #else
     if (mali_plat_data.limit_on == 0)
