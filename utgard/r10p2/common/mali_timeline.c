@@ -1564,7 +1564,10 @@ static void mali_timeline_do_sync_fence_callback(void *arg)
 #elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		fence_status = atomic_read(&sync_fence->status);
 #else
+	if (sync_fence->fence->ops->signaled)
 		fence_status = sync_fence->fence->ops->signaled(sync_fence->fence);
+	else
+		fence_status = dma_fence_is_signaled(sync_fence->fence);
 #endif
 
 		system = tracker->system;
