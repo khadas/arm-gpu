@@ -943,7 +943,7 @@ static phys_addr_t kbase_mmu_alloc_pgd(struct kbase_device *kbdev,
 
 	p = kbase_mem_pool_alloc(&kbdev->mem_pools.small[mmut->group_id]);
 	if (!p)
-		return 0;
+		return KBASE_INVALID_PHYSICAL_ADDRESS;
 
 	page = kmap(p);
 	if (page == NULL)
@@ -979,7 +979,7 @@ alloc_free:
 	kbase_mem_pool_free(&kbdev->mem_pools.small[mmut->group_id], p,
 		false);
 
-	return 0;
+	return KBASE_INVALID_PHYSICAL_ADDRESS;
 }
 
 /* Given PGD PFN for level N, return PGD PFN for level N+1, allocating the
@@ -1015,7 +1015,7 @@ static int mmu_get_next_pgd(struct kbase_device *kbdev,
 
 	if (!target_pgd) {
 		target_pgd = kbase_mmu_alloc_pgd(kbdev, mmut);
-		if (!target_pgd) {
+		if (target_pgd == KBASE_INVALID_PHYSICAL_ADDRESS) {
 			dev_dbg(kbdev->dev, "%s: kbase_mmu_alloc_pgd failure\n",
 					__func__);
 			kunmap(p);
@@ -1973,12 +1973,12 @@ int kbase_mmu_init(struct kbase_device *const kbdev,
 	if (mmut->mmu_teardown_pages == NULL)
 		return -ENOMEM;
 
-	mmut->pgd = 0;
+	mmut->pgd = KBASE_INVALID_PHYSICAL_ADDRESS;
 	/* We allocate pages into the kbdev memory pool, then
 	 * kbase_mmu_alloc_pgd will allocate out of that pool. This is done to
 	 * avoid allocations from the kernel happening with the lock held.
 	 */
-	while (!mmut->pgd) {
+	while (mmut->pgd == KBASE_INVALID_PHYSICAL_ADDRESS) {
 		int err;
 
 		err = kbase_mem_pool_grow(
@@ -1999,7 +1999,7 @@ int kbase_mmu_init(struct kbase_device *const kbdev,
 
 void kbase_mmu_term(struct kbase_device *kbdev, struct kbase_mmu_table *mmut)
 {
-	if (mmut->pgd) {
+	if (mmut->pgd != KBASE_INVALID_PHYSICAL_ADDRESS) {
 		mutex_lock(&mmut->mmu_lock);
 		mmu_teardown_level(kbdev, mmut, mmut->pgd, MIDGARD_MMU_TOPLEVEL,
 				mmut->mmu_teardown_pages);
