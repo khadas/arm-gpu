@@ -123,6 +123,8 @@ static mali_bool mali_timeline_fence_wait_check_status(struct mali_timeline_syst
 				} else {
 					ret = MALI_TRUE;
 				}
+			} else {
+				ret = dma_fence_is_signaled(sync_fence->fence);
 			}
 		} else {
 			MALI_PRINT_ERROR(("Mali Timeline: failed to get sync fence from fd %d\n", fence->sync_fd));
