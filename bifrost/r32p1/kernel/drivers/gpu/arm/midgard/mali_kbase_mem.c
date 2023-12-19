@@ -1900,6 +1900,9 @@ static int kbase_do_syncset(struct kbase_context *kctx,
 
 	kbase_sync_single(kctx, cpu_pa[page_off], gpu_pa[page_off],
 			offset, sz, sync_fn);
+	/* Calculate the size for last page */
+	sz = ((start + size - 1) & ~PAGE_MASK) + 1;
+
 	/* Limit the sync range to the physically backed region */
 	if (page_off + page_count > reg->gpu_alloc->nents) {
 		page_count = reg->gpu_alloc->nents - page_off;
