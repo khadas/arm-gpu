@@ -230,8 +230,8 @@ static void pm_callback_resume(struct kbase_device *kbdev)
 		clk_disable_unprepare(clk_mali);
 		dev_dbg(kbdev->dev, "reset gpu clock\n");
 	}
+	clk_stack = mpdata->clk_stack;
 	if (clk_stack) {
-		clk_stack = mpdata->clk_stack;
 		dev_dbg(kbdev->dev, "clk_stack = %lu\n", clk_get_rate(clk_stack));
 		if (__clk_is_enabled(clk_stack)) {
 			clk_disable_unprepare(clk_stack);

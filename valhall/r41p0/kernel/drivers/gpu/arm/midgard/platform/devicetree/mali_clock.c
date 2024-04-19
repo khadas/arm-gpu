@@ -41,6 +41,7 @@ int mali_clock_init_clk_tree(struct platform_device* pdev)
 {
 	mali_dvfs_threshold_table *dvfs_tbl = &pmali_plat->dvfs_table[pmali_plat->def_clock];
 	struct clk *clk_mali = pmali_plat->clk_mali;
+	struct clk *clk_stack = pmali_plat->clk_stack;
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0))
 	if ((0 == strcmp(dvfs_tbl->clk_parent, "gp0_pll")) &&
@@ -57,6 +58,13 @@ int mali_clock_init_clk_tree(struct platform_device* pdev)
 	else
 		clk_prepare_enable(clk_mali);
 	clk_set_rate(clk_mali, dvfs_tbl->clk_freq);
+	if (clk_stack) {
+		if (__clk_is_enabled(clk_stack))
+			pr_info("clk mali stack have enabled\n");
+		else
+			clk_prepare_enable(clk_stack);
+		clk_set_rate(clk_stack, dvfs_tbl->clk_freq);
+	}
 #else
 	/* pay attention of the sequence,
 	 * if the set clock first,then enable clock
@@ -69,6 +77,13 @@ int mali_clock_init_clk_tree(struct platform_device* pdev)
 	else
 		clk_prepare_enable(clk_mali);
 	clk_set_rate(clk_mali, dvfs_tbl->clk_freq);
+	if (clk_stack) {
+		if (__clk_is_enabled(clk_stack))
+			dev_dbg(&pdev->dev, "clk mali stack have enabled\n");
+		else
+			clk_prepare_enable(clk_stack);
+		clk_set_rate(clk_stack, dvfs_tbl->clk_freq);
+	}
 #endif
 
 	return 0;
@@ -95,9 +110,12 @@ static int critical_clock_set(size_t param)
 	unsigned int idx = param;
 	mali_dvfs_threshold_table *dvfs_tbl = &pmali_plat->dvfs_table[idx];
 
-	struct clk *clk_mali   = pmali_plat->clk_mali;
+	struct clk *clk_mali = pmali_plat->clk_mali;
+	struct clk *clk_stack = pmali_plat->clk_stack;
 
 	ret = clk_set_rate(clk_mali, dvfs_tbl->clk_freq);
+	if (clk_stack)
+		ret = clk_set_rate(clk_stack, dvfs_tbl->clk_freq);
 
 	return 0;
 }
@@ -107,25 +125,6 @@ int mali_clock_set(unsigned int clock)
 	return mali_clock_critical(critical_clock_set, (size_t)clock);
 }
 
-void disable_clock(void)
-{
-	struct clk *clk_mali = pmali_plat->clk_mali;
-
-	if (__clk_is_enabled(clk_mali)) {
-		clk_disable_unprepare(clk_mali);
-		pr_info("disable gpu clk done\n");
-	} else {
-		pr_info("gpu clk have disable before\n");
-	}
-}
-
-void enable_clock(void)
-{
-	struct clk *clk_mali = pmali_plat->clk_mali;
-
-	clk_prepare_enable(clk_mali);
-}
-
 u32 get_mali_freq(u32 idx)
 {
 	if (!mali_pm_statue) {
@@ -133,11 +132,6 @@ u32 get_mali_freq(u32 idx)
 	} else {
 		return 0;
 	}
-}
-
-void set_str_src(u32 data)
-{
-	printk("gpu: %s, %s, %d\n", __FILE__, __func__, __LINE__);
 }
 
 int mali_reset_info(struct platform_device *pdev, struct device_node *gpu_dn,
@@ -311,17 +305,17 @@ int mali_dt_info(struct platform_device *pdev, struct mali_plat_info_t *mpdata)
 
 		ret = of_property_read_u32(gpu_clk_dn,"voltage", &dvfs_tbl->voltage);
 		if (ret) {
-			dev_dbg(&pdev->dev, "read voltage failed\n");
+			dev_err(&pdev->dev, "read voltage failed\n");
 		}
 		ret = of_property_read_u32(gpu_clk_dn,"keep_count", &dvfs_tbl->keep_count);
 		if (ret) {
-			dev_dbg(&pdev->dev, "read keep_count failed\n");
+			dev_err(&pdev->dev, "read keep_count failed\n");
 		}
 		//downthreshold and upthreshold shall be u32
 		ret = of_property_read_u32_array(gpu_clk_dn,"threshold",
 		&dvfs_tbl->downthreshold, 2);
 		if (ret) {
-			dev_dbg(&pdev->dev, "read threshold failed\n");
+			dev_err(&pdev->dev, "read threshold failed\n");
 		}
 		dvfs_tbl->freq_index = i;
 
@@ -381,6 +375,11 @@ int mali_dt_info(struct platform_device *pdev, struct mali_plat_info_t *mpdata)
 	if (IS_ERR(mpdata->clk_mali)) {
 		dev_err(&pdev->dev, "failed to get clock pointer\n");
 		return -EFAULT;
+	}
+	mpdata->clk_stack = devm_clk_get(&pdev->dev, "gpu_stack");
+	if (IS_ERR(mpdata->clk_stack)) {
+		dev_info(&pdev->dev, "no gpu_stack clock pointer\n");
+		mpdata->clk_stack = NULL;
 	}
 
 	pmali_plat = mpdata;
