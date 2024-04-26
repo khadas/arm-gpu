@@ -40,12 +40,15 @@ endif
 
 ifeq "$(GPU_TYPE)" "vale"
 modules:
-	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers  \
+	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/gpu/arm/midgard  \
 	EXTRA_CFLAGS="-DCONFIG_MALI_CSF_SUPPORT -DCONFIG_MALI_PLATFORM_DEVICETREE -DCONFIG_MALI_DEVFREQ -DCONFIG_MALI_BACKEND=gpu -DCONFIG_MALI_GATOR_SUPPORT -DCONFIG_MALI_REAL_HW " \
 	EXTRA_CFLAGS+="-DCONFIG_MALI_DMA_BUF_MAP_ON_DEMAND=0 -DCONFIG_MALI_DMA_BUF_LEGACY_COMPAT=0 -DCONFIG_MALI_LOW_MEM=$(GPU_LOW_MEM) -DCONFIG_MALI_TRACE_POWER_GPU_WORK_PERIOD=1" \
 	EXTRA_CFLAGS+="-Wno-error -Wno-pointer-sign -Wno-error=frame-larger-than= $(EXTRA_INCLUDE) $(KBUILD_CFLAGS_MODULE)" \
 	EXTRA_LDFLAGS+="--strip-debug" \
-	CONFIG_MALI_MIDGARD=m CONFIG_MALI_PLATFORM_DEVICETREE=y CONFIG_MALI_DEVFREQ=y CONFIG_MALI_BACKEND=gpu CONFIG_MALI_GATOR_SUPPORT=y CONFIG_MALI_REAL_HW=y CONFIG_MALI_TRACE_POWER_GPU_WORK_PERIOD=y CONFIG_MALI_CSF_SUPPORT=y CONFIG_MALI_PROTECTED_MEMORY_ALLOCATOR=y
+	CONFIG_MALI_MIDGARD=m CONFIG_MALI_PLATFORM_DEVICETREE=y CONFIG_MALI_DEVFREQ=y CONFIG_MALI_BACKEND=gpu CONFIG_MALI_GATOR_SUPPORT=y CONFIG_MALI_REAL_HW=y CONFIG_MALI_TRACE_POWER_GPU_WORK_PERIOD=y CONFIG_MALI_CSF_SUPPORT=y
+	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/base/arm  \
+	EXTRA_CFLAGS="-Wno-error -Wno-pointer-sign -Wno-error=frame-larger-than= $(EXTRA_INCLUDE) $(KBUILD_CFLAGS_MODULE)" \
+	EXTRA_LDFLAGS+="--strip-debug"
 else
 modules:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/gpu/arm/midgard  \
@@ -59,12 +62,10 @@ ifeq "$(GPU_TYPE)" "vale"
 modules_install:
 	-include $(OUT_DIR)/include/config/auto.conf
 	$(Q)mkdir -p ${out_dir}/../vendor_lib/modules
-	$(MAKE) INSTALL_MOD_STRIP=1 M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers -C $(KERNEL_SRC) modules_install
+	$(MAKE) INSTALL_MOD_STRIP=1 M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/gpu/arm/midgard -C $(KERNEL_SRC) modules_install
 	$(Q)if [ -z "$(CONFIG_AMLOGIC_KERNEL_VERSION)" ]; then \
-		cd ${out_dir}/$(M)/; find -name "protected_memory_allocator.ko" -exec cp {} ${out_dir}/../vendor_lib/modules/protected_memory_allocator.ko \; ; \
 		cd ${out_dir}/$(M)/; find -name "mali*.ko" -exec cp {} ${out_dir}/../vendor_lib/modules/mali.ko \; ; \
 	else \
-		find $(INSTALL_MOD_PATH)/lib/modules/*/$(INSTALL_MOD_DIR) -name "protected_memory_allocator.ko" -exec cp {} ${out_dir}/../vendor_lib/modules/protected_memory_allocator.ko \; ; \
 		find $(INSTALL_MOD_PATH)/lib/modules/*/$(INSTALL_MOD_DIR) -name "mali*.ko" -exec cp {} ${out_dir}/../vendor_lib/modules/mali.ko \; ; \
 	fi;
 else
@@ -81,7 +82,8 @@ endif
 
 ifeq "$(GPU_TYPE)" "vale"
 clean:
-	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/gpu/arm/midgard clean
+	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/base/arm clean
 else
 clean:
 	$(MAKE) -C $(KERNEL_SRC) M=$(M)/$(GPU_DRV_VERSION)/kernel/drivers/gpu/arm/midgard clean
